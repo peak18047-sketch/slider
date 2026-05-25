@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Image Slider</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+.wrap{width:100%;max-width:700px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+
+/* MAIN SLIDE */
+.sc{position:relative;width:100%;height:360px;overflow:hidden}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 0.45s,transform 0.45s;transform:translateX(26px)}
+.slide.active{opacity:1;transform:translateX(0)}
+.slide.exit{opacity:0;transform:translateX(-26px)}
+.slide img{width:100%;height:100%;object-fit:cover;display:block}
+.ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.52) 0%,transparent 60%)}
+.stxt{position:absolute;bottom:24px;left:28px;right:72px;color:#fff}
+.stxt h2{font-size:20px;font-weight:600;margin-bottom:4px;line-height:1.3}
+.stxt p{font-size:13px;opacity:0.85}
+.nbtn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:background 0.2s;user-select:none}
+.nbtn:hover{background:rgba(255,255,255,0.3)}
+.nprev{left:12px}.nnext{right:12px}
+
+/* PROGRESS */
+.pbar{height:3px;background:#ddd}
+.pfill{height:100%;background:#378ADD;transition:width 0.4s}
+
+/* SHELF NAV */
+.shelf-nav{background:#2d2d2d;padding:0 0 10px}
+.shelf-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.shelf-scroll::-webkit-scrollbar{height:3px}
+.shelf-scroll::-webkit-scrollbar-thumb{background:#555;border-radius:2px}
+.shelf-inner{display:inline-flex;flex-direction:column;align-items:flex-start;padding:0 10px}
+.rock-wrap{position:relative;height:22px}
+.rock-indicator{position:absolute;top:0;width:44px;height:22px;pointer-events:none}
+.rock-indicator svg{width:100%;height:100%;display:block}
+.spike-strip svg{display:block}
+.plat-bar{height:10px;background:#c0622a}
+.boxes-row{display:flex;gap:5px;padding:5px 0 0}
+.box{width:48px;height:40px;border-radius:4px;border:1.5px solid #555;background:#888;cursor:pointer;overflow:hidden;position:relative;transition:transform 0.15s,border-color 0.15s;flex-shrink:0}
+.box:hover{transform:translateY(-2px);border-color:#aaa}
+.box.active{border-color:#378ADD;border-width:2px}
+.box img{width:100%;height:100%;object-fit:cover;display:block}
+.box-num{position:absolute;bottom:2px;right:3px;font-size:9px;color:#fff;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,0.8)}
+
+/* CONTROLS */
+.ctrl{padding:10px 14px;border-top:1px solid #eee;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff}
+.clabel{font-size:12px;color:#888;min-width:72px}
+.cgroup{display:flex;align-items:center;gap:8px;flex:1}
+.cbtn{background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;color:#333;display:flex;align-items:center;gap:4px;transition:background 0.15s}
+.cbtn:hover{background:#eee}
+.cbtn.on{border-color:#378ADD;color:#378ADD}
+.spv{font-size:12px;color:#888;min-width:26px}
+input[type=range]{flex:1;accent-color:#378ADD}
+
+/* EDIT PANEL */
+.ep{padding:12px 14px;border-top:1px solid #eee;display:none;background:#fafafa}
+.ep.open{display:block}
+.stabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.stab{font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid #ddd;cursor:pointer;background:#f0f0f0;color:#666;transition:all 0.15s}
+.stab.active{border-color:#378ADD;color:#378ADD;background:#e8f3fb}
+.erow{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.erow label{font-size:12px;color:#888;min-width:70px}
+.erow input[type=text],.erow input[type=url]{flex:1;font-size:12px;padding:5px 9px;border:1px solid #ddd;border-radius:5px;background:#fff;color:#333;min-width:100px}
+.abtn{padding:5px 14px;border-radius:6px;background:#378ADD;color:#fff;border:none;font-size:12px;cursor:pointer;font-weight:600}
+.abtn:hover{background:#185FA5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sc" id="sc">
+    <button class="nbtn nprev" onclick="go(-1)">&#8249;</button>
+    <button class="nbtn nnext" onclick="go(1)">&#8250;</button>
+  </div>
+  <div class="pbar"><div class="pfill" id="pf" style="width:7.14%"></div></div>
+  <div class="shelf-nav">
+    <div class="shelf-scroll" id="shelfScroll">
+      <div class="shelf-inner" id="shelfInner">
+        <div class="rock-wrap" id="rockWrap">
+          <div class="rock-indicator" id="rockEl"></div>
+        </div>
+        <div class="spike-strip" id="spikeStrip"></div>
+        <div class="plat-bar" id="platBar"></div>
+        <div class="boxes-row" id="boxesRow"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl">
+    <div class="cgroup">
+      <span class="clabel">เล่นอัตโนมัติ</span>
+      <button class="cbtn on" id="aBtn" onclick="toggleAuto()">&#9654; เปิด</button>
+    </div>
+    <div class="cgroup">
+      <span class="clabel">ความเร็ว</span>
+      <input type="range" min="1" max="8" step="1" value="4" id="spd" oninput="setSpd(this.value)"/>
+      <span class="spv" id="spv">4s</span>
+    </div>
+    <div class="cgroup" style="justify-content:flex-end">
+      <button class="cbtn" onclick="toggleEdit()">&#9998; แก้ไขสไลด์</button>
+    </div>
+  </div>
+  <div class="ep" id="ep">
+    <div class="stabs" id="stabs"></div>
+    <div class="erow"><label>URL รูปภาพ</label><input type="url" id="eImg" placeholder="https://...jpg"/></div>
+    <div class="erow"><label>หัวข้อ</label><input type="text" id="eTitle"/></div>
+    <div class="erow"><label>คำอธิบาย</label><input type="text" id="eDesc"/></div>
+    <div class="erow" style="justify-content:flex-end"><button class="abtn" onclick="applyEdit()">&#10003; บันทึก</button></div>
+  </div>
+</div>
+
+<script>
+const DATA=[
+  {img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=70",title:"สำรวจโลกที่สวยงาม",desc:"ค้นพบประสบการณ์ใหม่ที่น่าจดจำ"},
+  {img:"https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900&q=70",title:"ธรรมชาติที่บริสุทธิ์",desc:"ออกเดินทางสู่ความสงบกลางป่า"},
+  {img:"https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900&q=70",title:"ท้องฟ้าไร้ขีดจำกัด",desc:"แรงบันดาลใจจากทุกมุมมอง"},
+  {img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&q=70",title:"ชายหาดในฝัน",desc:"พักผ่อนเหนือคลื่นแสงแดดอบอุ่น"},
+  {img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=70",title:"ยอดเขาสูง",desc:"ความยิ่งใหญ่ที่ต้องพิชิต"},
+  {img:"https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=900&q=70",title:"แสงสนธยา",desc:"บรรยากาศงดงามยามพระอาทิตย์ตก"},
+  {img:"https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=900&q=70",title:"ทุ่งกว้างไกล",desc:"ความสงบท่ามกลางธรรมชาติ"},
+  {img:"https://images.unsplash.com/photo-1519046904884-53103b34b206?w=900&q=70",title:"เกาะสวรรค์",desc:"หมู่เกาะรอการค้นพบ"},
+  {img:"https://images.unsplash.com/photo-1501854140801-50d01698950b?w=900&q=70",title:"วิวสายหมอก",desc:"ความลึกลับในทะเลหมอก"},
+  {img:"https://images.unsplash.com/photo-1523712999610-f77fbcfc3843?w=900&q=70",title:"แสงในป่า",desc:"แสงสาดสร้างมนต์เสน่ห์"},
+  {img:"https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=900&q=70",title:"ทะเลสาบกระจก",desc:"ผิวน้ำสะท้อนท้องฟ้า"},
+  {img:"https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=900&q=70",title:"กระท่อมริมน้ำ",desc:"ความเรียบง่ายงดงาม"},
+  {img:"https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=70",title:"แสงทองยามเย็น",desc:"ปิดท้ายวันที่สวยงาม"},
+  {img:"https://images.unsplash.com/photo-1518791841217-8f162f1912da?w=900&q=70",title:"ดอกไม้บาน",desc:"ความงามทุกฤดูกาล"}
+];
+
+const BOX_W=48,GAP=5,TOTAL=DATA.length;
+let cur=0,autoPlay=true,iv=null,speed=4000,editIdx=0;
+
+/* slides */
+const sc=document.getElementById('sc');
+const pB=sc.querySelector('.nprev'),nB=sc.querySelector('.nnext');
+DATA.forEach((d,i)=>{
+  const el=document.createElement('div');
+  el.className='slide'+(i===0?' active':'');
+  el.id='sl-'+i;
+  el.innerHTML=`<img src="${d.img}" id="img-${i}" alt="สไลด์ ${i+1}" loading="${i<2?'eager':'lazy'}"/>
+    <div class="ov"></div>
+    <div class="stxt"><h2 id="t-${i}">${d.title}</h2><p id="d-${i}">${d.desc}</p></div>`;
+  sc.insertBefore(el,pB);
+});
+
+/* rock */
+document.getElementById('rockEl').innerHTML=`<svg viewBox="0 0 44 22" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="22" cy="16" rx="20" ry="8" fill="#5a5a5a"/>
+  <ellipse cx="22" cy="13" rx="16" ry="6.5" fill="#787878"/>
+  <ellipse cx="16" cy="11" rx="5" ry="3.5" fill="#9a9a9a"/>
+  <ellipse cx="28" cy="12" rx="4" ry="2.5" fill="#8a8a8a"/>
+</svg>`;
+
+/* shelf */
+function buildShelf(){
+  const totalW=TOTAL*(BOX_W+GAP)-GAP+20;
+  const sw=8,n=Math.ceil(totalW/sw);
+  let d='';
+  for(let i=0;i<n;i++){const x=i*sw;d+=`M${x},10 L${x+sw/2},0 L${x+sw},10 `;}
+  document.getElementById('spikeStrip').innerHTML=
+    `<svg viewBox="0 0 ${n*sw} 10" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="width:${totalW}px;height:10px"><path d="${d}" fill="#3a8c2a"/></svg>`;
+  document.getElementById('platBar').style.width=totalW+'px';
+  document.getElementById('shelfInner').style.width=totalW+'px';
+  document.getElementById('rockWrap').style.width=totalW+'px';
+}
+
+/* boxes */
+function buildBoxes(){
+  const row=document.getElementById('boxesRow');
+  DATA.forEach((d,i)=>{
+    const box=document.createElement('div');
+    box.className='box'+(i===0?' active':'');
+    box.id='bx-'+i;
+    box.onclick=(()=>{const idx=i;return()=>goTo(idx);})();
+    box.innerHTML=`<img src="${d.img}" alt="" loading="lazy"/><span class="box-num">${i+1}</span>`;
+    row.appendChild(box);
+  });
+}
+
+function moveRock(i,animate){
+  const rockEl=document.getElementById('rockEl');
+  const box=document.getElementById('bx-'+i);
+  if(!box) return;
+  const left=box.offsetLeft;
+  if(animate===false){
+    rockEl.style.transition='none';
+    rockEl.style.left=left+'px';
+    rockEl.getBoundingClientRect();
+    rockEl.style.transition='left 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+  } else {
+    rockEl.style.transition='left 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+    rockEl.style.left=left+'px';
+  }
+  box.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+
+function goTo(n){
+  const fromIdx=cur;
+  const toIdx=((n%TOTAL)+TOTAL)%TOTAL;
+  const isLooping=(fromIdx===TOTAL-1&&toIdx===0)||(fromIdx===0&&toIdx===TOTAL-1);
+  document.querySelectorAll('.slide')[fromIdx].classList.remove('active');
+  document.querySelectorAll('.slide')[fromIdx].classList.add('exit');
+  setTimeout(()=>document.querySelectorAll('.slide')[fromIdx].classList.remove('exit'),450);
+  document.querySelectorAll('.box')[fromIdx].classList.remove('active');
+  cur=toIdx;
+  document.querySelectorAll('.slide')[cur].classList.add('active');
+  document.querySelectorAll('.box')[cur].classList.add('active');
+  document.getElementById('pf').style.width=((cur+1)/TOTAL*100)+'%';
+  moveRock(cur,!isLooping);
+}
+
+function go(d){goTo(cur+d);}
+function startAuto(){clearInterval(iv);if(autoPlay)iv=setInterval(()=>go(1),speed);}
+function toggleAuto(){
+  autoPlay=!autoPlay;
+  const b=document.getElementById('aBtn');
+  b.innerHTML=autoPlay?'&#9654; เปิด':'&#9646;&#9646; หยุด';
+  b.classList.toggle('on',autoPlay);
+  startAuto();
+}
+function setSpd(v){speed=v*1000;document.getElementById('spv').textContent=v+'s';startAuto();}
+
+function toggleEdit(){
+  const p=document.getElementById('ep');
+  p.classList.toggle('open');
+  if(p.classList.contains('open')){buildTabs();selectEdit(0);}
+}
+function buildTabs(){
+  const t=document.getElementById('stabs');t.innerHTML='';
+  DATA.forEach((_,i)=>{
+    const b=document.createElement('button');
+    b.className='stab'+(i===editIdx?' active':'');
+    b.textContent='#'+(i+1);
+    b.onclick=()=>selectEdit(i);
+    t.appendChild(b);
+  });
+}
+function selectEdit(i){
+  editIdx=i;
+  document.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.getElementById('eImg').value=document.getElementById('img-'+i).src;
+  document.getElementById('eTitle').value=document.getElementById('t-'+i).textContent;
+  document.getElementById('eDesc').value=document.getElementById('d-'+i).textContent;
+}
+function applyEdit(){
+  const i=editIdx,url=document.getElementById('eImg').value.trim();
+  if(url){document.getElementById('img-'+i).src=url;document.getElementById('bx-'+i).querySelector('img').src=url;DATA[i].img=url;}
+  const t=document.getElementById('eTitle').value,d=document.getElementById('eDesc').value;
+  document.getElementById('t-'+i).textContent=t;document.getElementById('d-'+i).textContent=d;
+  DATA[i].title=t;DATA[i].desc=d;
+}
+
+buildShelf();
+buildBoxes();
+setTimeout(()=>moveRock(0,false),150);
+startAuto();
+</script>
+</body>
+</html>
